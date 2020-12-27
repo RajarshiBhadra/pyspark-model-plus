@@ -1,4 +1,12 @@
-# spark-stratifier
+# pyspark-model-plus
 [![PyPI version](https://img.shields.io/pypi/v/pyspark-model-plus.svg)](https://img.shields.io/pypi/v/pyspark-model-plus)
-[![Start with Why](https://img.shields.io/badge/start%20with-why%3F-brightgreen.svg?style=flat)](http://www.ted.com/talks/simon_sinek_how_great_leaders_inspire_action)
+
+This package has been written keeping in mind some functions that we commonly use in scikit-learn but are not currently available in 
+spark machine learning library. Capabilities the package is adding are
+
+* Multi Class LogLoss Evaluator
+* Stratified Cross Validation
+
+
+
 
