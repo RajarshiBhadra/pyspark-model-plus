@@ -1,2 +1,2 @@
-from .modelplus import MulticlassLogLossEvaluator
+from .evaluation import MulticlassLogLossEvaluator
 
