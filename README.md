@@ -37,23 +37,83 @@ $ pip install https://test.pypi.org/simple/ pyspark-model-plus-rbhadra90==0.0.12
 ```
 ## How to use
 
-Here is an example on how to use the function using the iris data.
+Here is an example on how to use the function using the [iris data](https://archive.ics.uci.edu/ml/datasets/iris).
 Let us first try to split the data using scikit learn's train test split functionality
 
 ```py
 import pandas as pd
 from sklearn.model_selection import train_test_split
 
-full_iris = pd.read_csv("/dbfs/FileStore/tables/iris.csv")
+full_iris = pd.read_csv("iris.csv")
 train,test = train_test_split(full_iris,stratify = full_iris["Species"],test_size = .2)
 train.append(train[train["Species"] == "setosa"]).\
-      append(train[train["Species"] == "setosa"]).to_csv("/dbfs/FileStore/tables/iris_train.csv", index = False)
-test.to_csv("/dbfs/FileStore/tables/iris_test.csv", index = False)
+      append(train[train["Species"] == "setosa"]).to_csv("iris_train.csv", index = False)
+test.to_csv("iris_test.csv", index = False)
 ```
 
-**Importing to pyspark
+**Importing to pyspark**
 
 ```py
 df_train = spark.read.csv("iris_train.csv", inferSchema=True, header=True)
 df_test = spark.read.csv("iris_test.csv", inferSchema=True, header=True)
+```
+
+**Creating pipeline to prepare training data**
+
+```py
+stages = []
+indexer = StringIndexer(inputCol="Species", outputCol="labelIndex")
+stages += [indexer]
+imputer = CustomMeanImputer(cols_to_impute = ['Sepal_Length', 'Sepal_Width', 'Petal_Length', 'Petal_Width'])
+stages += [imputer]
+assembler = VectorAssembler(
+    inputCols=["Sepal_Length", "Sepal_Width", "Petal_Length", "Petal_Width"],
+    outputCol="features")
+stages += [assembler]
+
+pipeline = Pipeline(stages=stages)
+pipelineData = pipeline.fit(df_train)
+training_data = pipelineData.transform(df_train)
+
+```
+
+**Training RandomForest on unbalanced data using Stratified Crossvalidation
+
+```py
+model = RandomForestClassifier(labelCol="labelIndex",
+                               featuresCol="features",
+                               probabilityCol="probability",
+                               predictionCol="prediction")
+paramGrid = (ParamGridBuilder().addGrid(model.numTrees, [250, 300]).build())
+cv = StratifiedCrossValidator(
+    labelCol = "labelIndex",
+    estimator=model,
+    estimatorParamMaps=paramGrid,
+    evaluator=MulticlassLogLossEvaluator(labelCol="labelIndex"),
+    numFolds=3,
+    stratify_summary = True
+)
+
+# stratifiedCV = StratifiedCrossValidator(cv)
+cvModel = cv.fit(training_data)
+```
+As the training progresses you will see the progress being printed
+
+```py
+Initiating Training for fold 1
+Initiating Training for fold 2
+Initiating Training for fold 3
+Out[19]: [0.06820200113875617, 0.06960025759185091]
+```
+
+Additionally if you want to see how the startified crossvalidator is splitting the data for each fold, you can run with the `stratify_summary=True` and see the report as below
+
+```py
++----------+------+------+------+
+|labelIndex|fold_1|fold_2|fold_3|
++----------+------+------+------+
+|       0.0|    40|    40|    40|
+|       1.0|    13|    14|    13|
+|       2.0|    13|    14|    13|
++----------+------+------+------+
 ```
