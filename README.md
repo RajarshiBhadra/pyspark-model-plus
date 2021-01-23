@@ -32,4 +32,6 @@ This function tries to address both the issues by making the function independan
 The package currently requires only [`numpy`](https://github.com/numpy/numpy) and [`pyspark`](https://github.com/apache/spark/tree/master/python/pyspark).
 
 ## Installation
-
+```
+$ pip install https://test.pypi.org/simple/ pyspark-model-plus-rbhadra90==0.0.12
+```
