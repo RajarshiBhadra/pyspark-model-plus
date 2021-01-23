@@ -8,7 +8,15 @@ spark machine learning library. Capabilities the package is adding are
 * Stratified Cross Validation
 * Impute multiple columns by column mean (faster)
 
-GitIgnore Modified
+About the functions
+
+**MulticlassLogLossEvaluator**
+
+
+**StratifiedCrossValidator**
+
+
+**CustomMeanImputer**
 
 
 
