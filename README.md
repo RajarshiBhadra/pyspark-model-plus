@@ -19,7 +19,7 @@ About the functions
 Stratified sampling is important for hyper parameter tuning during CV fold training as it enables us keep the final tuning parameters robust against sampling bias speciaally whe the data is unabalanced. [Spark documentation](https://spark.apache.org/docs/latest/ml-tuning.html#cross-validation) indicates that we currently cannot do that. As a result many approaches has been proposed to include this in pyspark. For example [spark_stratifier](https://github.com/interviewstreet/spark-stratifier) implements this functionality but with two major drawbacks
 
 * The algorithm is dependent on joins
-* It enables us to implement binary classification
+* It only works for binary classification problems(as of now)
 
 This function tries to address both the issues by making the function independant of joins and also making the approach general such that startified cross validation can be done on multiclass classification problems as well
 
