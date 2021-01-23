@@ -29,7 +29,7 @@ This function tries to address both the issues by making the function independan
 
 ## Requirements
 
-The package currently requires only [`numpy`](https://github.com/numpy/numpy) and [`pyspark`].(https://github.com/apache/spark/tree/master/python/pyspark)
+The package currently requires only [`numpy`](https://github.com/numpy/numpy) and [`pyspark`](https://github.com/apache/spark/tree/master/python/pyspark).
 
-## How to use
+## Installation
 
