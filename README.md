@@ -6,6 +6,7 @@ spark machine learning library. Capabilities the package is adding are
 
 * Multi Class LogLoss Evaluator
 * Stratified Cross Validation
+* Impute multiple columns by column mean (faster)
 
 GitIgnore Modified
 
