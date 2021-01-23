@@ -35,3 +35,25 @@ The package currently requires only [`numpy`](https://github.com/numpy/numpy) an
 ```
 $ pip install https://test.pypi.org/simple/ pyspark-model-plus-rbhadra90==0.0.12
 ```
+## How to use
+
+Here is an example on how to use the function using the iris data.
+Let us first try to split the data using scikit learn's train test split functionality
+
+```py
+import pandas as pd
+from sklearn.model_selection import train_test_split
+
+full_iris = pd.read_csv("/dbfs/FileStore/tables/iris.csv")
+train,test = train_test_split(full_iris,stratify = full_iris["Species"],test_size = .2)
+train.append(train[train["Species"] == "setosa"]).\
+      append(train[train["Species"] == "setosa"]).to_csv("/dbfs/FileStore/tables/iris_train.csv", index = False)
+test.to_csv("/dbfs/FileStore/tables/iris_test.csv", index = False)
+```
+
+**Importing to pyspark
+
+```py
+df_train = spark.read.csv("iris_train.csv", inferSchema=True, header=True)
+df_test = spark.read.csv("iris_test.csv", inferSchema=True, header=True)
+```
