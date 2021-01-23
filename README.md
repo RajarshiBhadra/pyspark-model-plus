@@ -119,8 +119,6 @@ Additionally if you want to see how the startified crossvalidator is splitting t
 ```
 # Contributing
 
-Contributing
-------------
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](https://github.com/RajarshiBhadra/pyspark-model-plus/issues)
 
 If you want to write some code and contribute to this project, go ahead and start a pull request. I hope this tool is useful for the community and I would love to hear about how this helps solve your problems!
