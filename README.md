@@ -8,7 +8,7 @@ spark machine learning library. Capabilities the package is adding are
 * Stratified Cross Validation
 * Impute multiple columns by column mean (faster)
 
-About the functions
+## About the functions
 
 **MulticlassLogLossEvaluator**
 
@@ -27,6 +27,6 @@ This function tries to address both the issues by making the function independan
 
 [Spark documentation](https://spark.apache.org/docs/latest/api/python/pyspark.ml.html?highlight=impute#pyspark.ml.feature.Imputer) shows that a imputer class exists. However for large data sets using for loop in this function makes it slow. This function tried to address that usse by tryinjg to do impute by mean simulateneously using agg and python distionary
 
-
+## How to use
 
 
