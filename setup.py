@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setuptools.setup(
     name="pyspark-model-plus-rbhadra90", # Replace with your own username
-    version="0.0.9",
+    version="0.0.12",
     author="Rajarshi Bhadra",
     author_email="bhadrarajarshi9@gmail.com",
     description="Enhancements to commonly used pyspark functions for building models",
