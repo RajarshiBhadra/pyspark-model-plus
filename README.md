@@ -12,7 +12,7 @@ spark machine learning library. Capabilities the package is currently adding are
 
 **MulticlassLogLossEvaluator**
 
-[Spark documentaion](https://spark.apache.org/docs/1.6.0/mllib-evaluation-metrics.html) mentions currently there is no existing function available in default spark mllib to perform logloss evaluation for categorical variables. The corresponding function that enables us to perform this in scikit-learn is [log_loss](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html).This function is an attempt to add that functionality so that it can be used with standard ML pipelines. The core idea for the algorthm has been made on the basis of this [post](http://www.kaggle.com/c/emc-data-science/forums/t/2149/is-anyone-noticing-difference-betwen-validation-and-leaderboard-error/12209#post12209).
+[Spark documentation](https://spark.apache.org/docs/1.6.0/mllib-evaluation-metrics.html) mentions currently there is no existing function available in default spark mllib to perform logloss evaluation for categorical variables. The corresponding function that enables us to perform this in scikit-learn is [log_loss](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.log_loss.html).This function is an attempt to add that functionality so that it can be used with standard ML pipelines. The core idea for the algorthm has been made on the basis of this [post](http://www.kaggle.com/c/emc-data-science/forums/t/2149/is-anyone-noticing-difference-betwen-validation-and-leaderboard-error/12209#post12209).
 
 **StratifiedCrossValidator**  
 
