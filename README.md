@@ -126,6 +126,28 @@ Additionally if you want to see how the startified crossvalidator is splitting t
 |       2.0|    13|    14|    13|
 +----------+------+------+------+
 ```
+# Evaluate and compare with scikit learn
+
+### With MultiClassLogLossEvaluator
+
+```py
+test_data = pipelineData.transform(df_test)
+predictions = cvModel.transform(test_data)
+evaluator = MulticlassLogLossEvaluator(labelCol="labelIndex")
+accuracy = evaluator.evaluate(predictions)
+accuracy
+
+ 0.07676493894621013
+```
+
+### With scikit-learn
+
+```py
+from sklearn.metrics import log_loss
+predictions_pandas = predictions.toPandas()
+log_loss(predictions_pandas["labelIndex"].tolist(),predictions_pandas["probability"].tolist())
+```
+
 # Contributing
 
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](https://github.com/RajarshiBhadra/pyspark-model-plus/issues)
