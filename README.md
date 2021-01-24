@@ -51,6 +51,15 @@ train.append(train[train["Species"] == "setosa"]).\
 test.to_csv("iris_test.csv", index = False)
 ```
 
+**Importing Packages**
+
+```py
+from pyspark_model_plus.evaluation import MulticlassLogLossEvaluator
+from pyspark_model_plus.training import StratifiedCrossValidator
+from pyspark_model_plus.transform import CustomMeanImputer
+```
+
+
 **Importing to pyspark**
 
 ```py
