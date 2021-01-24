@@ -128,7 +128,7 @@ Additionally if you want to see how the startified crossvalidator is splitting t
 ```
 # Evaluate and compare with scikit learn
 
-### With MultiClassLogLossEvaluator
+### With MulticlassLogLossEvaluator
 
 ```py
 test_data = pipelineData.transform(df_test)
