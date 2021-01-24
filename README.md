@@ -33,7 +33,7 @@ The package currently requires only [`numpy`](https://github.com/numpy/numpy) an
 
 ## Installation
 ```
-$ pip install https://test.pypi.org/simple/ pyspark-model-plus-rbhadra90==0.0.12
+$ pip install pyspark-model-plus
 ```
 ## How to use
 
