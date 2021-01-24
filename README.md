@@ -137,7 +137,7 @@ evaluator = MulticlassLogLossEvaluator(labelCol="labelIndex")
 accuracy = evaluator.evaluate(predictions)
 accuracy
 
- 0.07676493894621013
+Out[23]: 0.07676493894621013
 ```
 
 ### With scikit-learn
@@ -146,6 +146,8 @@ accuracy
 from sklearn.metrics import log_loss
 predictions_pandas = predictions.toPandas()
 log_loss(predictions_pandas["labelIndex"].tolist(),predictions_pandas["probability"].tolist())
+
+Out[24]: 0.0767649389462101
 ```
 
 # Contributing
