@@ -1,70 +1,225 @@
+from pyspark.ml.param import Param, Params, TypeConverters
 from pyspark.ml.tuning import CrossValidator
 from pyspark.sql import Window
 from pyspark.sql import functions as f
-from pyspark.ml.evaluation import Evaluator
-from functools import reduce
 import numpy as np
 from pyspark.sql import Window
 from pyspark.sql.functions import monotonically_increasing_id
 from pyspark.ml.tuning import CrossValidator, CrossValidatorModel
+from pyspark import keyword_only
+from pyspark.ml.util import _MLflowInstrumentation
+from multiprocessing.pool import ThreadPool
+
+
+def _parallelFitTasks(est, train, eva, validation, epm, collectSubModel):
+    """
+    Creates a list of callables which can be called from different threads to fit and evaluate
+    an estimator in parallel. Each callable returns an `(index, metric)` pair.
+
+    Parameters
+    ----------
+    est : :py:class:`pyspark.ml.baseEstimator`
+        he estimator to be fit.
+    train : :py:class:`pyspark.sql.DataFrame`
+        DataFrame, training data set, used for fitting.
+    eva : :py:class:`pyspark.ml.evaluation.Evaluator`
+        used to compute `metric`
+    validation : :py:class:`pyspark.sql.DataFrame`
+        DataFrame, validation data set, used for evaluation.
+    epm : :py:class:`collections.abc.Sequence`
+        Sequence of ParamMap, params maps to be used during fitting & evaluation.
+    collectSubModel : bool
+        Whether to collect sub model.
+
+    Returns
+    -------
+    tuple
+        (int, float, subModel), an index into `epm` and the associated metric value.
+    """
+    modelIter = est.fitMultiple(train, epm)
+
+    def singleTask():
+        index, model = next(modelIter)
+        metric = eva.evaluate(model.transform(validation, epm[index]))
+        return index, metric, model if collectSubModel else None
+
+    return [singleTask] * len(epm)
+
 
 class StratifiedCrossValidator(CrossValidator):
-    def __init__(self,estimator,estimatorParamMaps,evaluator,numFolds,stratify_summary = False,labelCol="label"):
+    stratify_summary = Param(
+        Params._dummy(),
+        "stratify_summary",
+        "flag to show stratify summary",
+        typeConverter=TypeConverters.toBoolean,
+    )
+
+    labelCol = Param(
+        Params._dummy(),
+        "labelCol",
+        "Column containing the labels",
+        typeConverter=TypeConverters.toString,
+    )
+
+    @keyword_only
+    def __init__(
+        self,
+        *,
+        estimator=None,
+        estimatorParamMaps=None,
+        evaluator=None,
+        numFolds=3,
+        seed=None,
+        parallelism=1,
+        collectSubModels=False,
+        foldCol="",
+        stratify_summary: bool = False,
+        labelCol: str = "label",
+    ):
+        """
+        __init__(self, \\*, estimator=None, estimatorParamMaps=None, evaluator=None, numFolds=3,\
+                 seed=None, parallelism=1, collectSubModels=False, foldCol="",\
+                 stratify_summary=False, labelCol="bool"):
+        """
         super(CrossValidator, self).__init__()
-        self.labelCol = labelCol
-        self.estimator = estimator
-        self.estimatorParamMaps = estimatorParamMaps
-        self.evaluator = evaluator
-        self.numFolds = numFolds
-        self.stratify_summary = stratify_summary
-  
-    def stratify_data(self, dataset):
-        nfolds = self.numFolds
+        self._setDefault(parallelism=1, stratify_summary=False, labelCol="label")
+        kwargs = self._input_kwargs
+        self._set(**kwargs)
+
+    @keyword_only
+    def setParams(
+        self,
+        *,
+        estimator=None,
+        estimatorParamMaps=None,
+        evaluator=None,
+        numFolds=3,
+        seed=None,
+        parallelism=1,
+        collectSubModels=False,
+        foldCol="",
+        stratify_summary: bool = False,
+        labelCol: str = "label",
+    ):
+        """
+        setParams(self, \\*, estimator=None, estimatorParamMaps=None, evaluator=None, numFolds=3,\
+                  seed=None, parallelism=1, collectSubModels=False, foldCol="",\
+                  stratify_summary=False, labelCol="bool"):
+        Sets params for cross validator.
+        """
+        kwargs = self._input_kwargs
+        return self._set(**kwargs)
+
+    def setStratifySummary(self, value):
+        """
+        Sets the value of stratify_summary flag.
+        """
+        return self._set(stratify_summary=value)
+
+    def getStratifySummary(self):
+        return self.getOrDefault(self.stratify_summary)
+
+    def setLabelCol(self, value):
+        """
+        Set the value for the variable labelCol
+        """
+        return self._set(labelCol=value)
+
+    def getLabelCol(self):
+        return self.getOrDefault(self.labelCol)
+
+    def _stratify_data(self, dataset):
+        nfolds = self.getOrDefault(self.numFolds)
+        labelCol = self.getOrDefault(self.labelCol)
+        stratify_summary = self.getOrDefault(self.stratify_summary)
         df = dataset.withColumn("id", monotonically_increasing_id())
-        windowval = (Window.partitionBy(self.labelCol).orderBy('id').rangeBetween(Window.unboundedPreceding, 0))
-        stratified_data = df.withColumn('cum_sum', f.sum(f.lit(1)).over(windowval))
-        stratified_data = stratified_data.withColumn("bucket_fold", f.col("cum_sum") % nfolds)
-        
-        if self.stratify_summary:
-            self.stratify_summary = stratified_data.withColumn("bucket_fold",f.concat(f.lit("fold_"),f.col("bucket_fold") + 1)).\
-                                                  groupby(self.labelCol).\
-                                                  pivot("bucket_fold").\
-                                                  agg(f.count("id"))
-        else:
-            self.stratify_summary = "To create summary rerun with stratify_summary = True"
-        
-        stratified_data = stratified_data.drop(*["id","cum_sum"])
-        
+        windowval = (
+            Window.partitionBy(labelCol)
+            .orderBy("id")
+            .rangeBetween(Window.unboundedPreceding, 0)
+        )
+        stratified_data = df.withColumn("cum_sum", f.sum(f.lit(1)).over(windowval))
+        stratified_data = stratified_data.withColumn(
+            "bucket_fold", f.col("cum_sum") % nfolds
+        )
+
+        if stratify_summary:
+            stratify_summary = (
+                stratified_data.withColumn(
+                    "bucket_fold", f.concat(f.lit("fold_"), f.col("bucket_fold") + 1)
+                )
+                .groupby(labelCol)
+                .pivot("bucket_fold")
+                .agg(f.count("id"))
+            )
+            print(stratify_summary.toPandas())
+
+        stratified_data = stratified_data.drop(*["id", "cum_sum"])
+
         return stratified_data
-    
+
+
     def _fit(self, dataset):
-        est = self.estimator
-        epm = self.estimatorParamMaps
+        from pyspark import inheritable_thread_target
+        from pyspark.ml.util import _cancel_on_failure
+
+        spark = dataset.sql_ctx.sparkSession
+        should_log_to_mlflow = _MLflowInstrumentation.get_mlflow_logging_status(spark)
+
+        est = self.getOrDefault(self.estimator)
+        epm = self.getOrDefault(self.estimatorParamMaps)
         numModels = len(epm)
-        eva = self.evaluator
-        metricName = eva.getMetricName()
-        nFolds = self.numFolds
+        eva = self.getOrDefault(self.evaluator)
+        nFolds = self.getOrDefault(self.numFolds)
         metrics = [0.0] * numModels
-        stratified_data = self.stratify_data(dataset)
-        
-        for i in range(nFolds): 
-            
-            print(f"Initiating Training for fold {i + 1}")
-            
+        metrics_all = [[0.0] * numModels for i in range(nFolds)]
+
+        pool = ThreadPool(processes=min(self.getParallelism(), numModels))
+        subModels = None
+        collectSubModelsParam = self.getCollectSubModels()
+        if collectSubModelsParam:
+            subModels = [[None for j in range(numModels)] for i in range(nFolds)]
+
+        stratified_data = self._stratify_data(dataset)
+        for i in range(nFolds):
+
             train = stratified_data.filter(stratified_data["bucket_fold"] != i)
             validation = stratified_data.filter(stratified_data["bucket_fold"] == i)
-            
-            models = est.fit(train, epm)
-            
-            for j in range(numModels):
-                model = models[j]
-                metric = eva.evaluate(model.transform(validation, epm[j]))
-                metrics[j] += metric/nFolds      
-                
+
+            tasks = _parallelFitTasks(
+                est, train, eva, validation, epm, collectSubModelsParam
+            )
+
+            sub_task_failed = [False]
+
+            def calculate_metrics():
+                @inheritable_thread_target
+                def run_task(task):
+                    if sub_task_failed[0]:
+                        raise RuntimeError(
+                            "Terminate this task because one of other task failed."
+                        )
+                    return task()
+
+                for j, metric, subModel in pool.imap_unordered(run_task, tasks):
+                    metrics[j] += metric / nFolds
+                    metrics_all[i][j] = metric
+                    if collectSubModelsParam:
+                        subModels[i][j] = subModel
+
+            _cancel_on_failure(
+                dataset._sc, self.uid, sub_task_failed, calculate_metrics
+            )
+            validation.unpersist()
+            train.unpersist()
+
+        if should_log_to_mlflow:
+            mlflow_logger = _MLflowInstrumentation()
+            mlflow_logger.log_crossvalidator(self, metrics_all)
+
         if eva.isLargerBetter():
             bestIndex = np.argmax(metrics)
         else:
             bestIndex = np.argmin(metrics)
-        
         bestModel = est.fit(dataset, epm[bestIndex])
-        return self._copyValues(CrossValidatorModel(bestModel, metrics))
+        return self._copyValues(CrossValidatorModel(bestModel, metrics, subModels))
