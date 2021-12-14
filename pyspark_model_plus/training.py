@@ -73,8 +73,8 @@ class StratifiedCrossValidator(CrossValidator):
         parallelism=1,
         collectSubModels=False,
         foldCol="",
-        stratify_summary: bool = False,
-        labelCol: str = "label",
+        stratify_summary=False,
+        labelCol="label",
     ):
         """
         __init__(self, \\*, estimator=None, estimatorParamMaps=None, evaluator=None, numFolds=3,\
@@ -98,8 +98,8 @@ class StratifiedCrossValidator(CrossValidator):
         parallelism=1,
         collectSubModels=False,
         foldCol="",
-        stratify_summary: bool = False,
-        labelCol: str = "label",
+        stratify_summary=False,
+        labelCol="label",
     ):
         """
         setParams(self, \\*, estimator=None, estimatorParamMaps=None, evaluator=None, numFolds=3,\
