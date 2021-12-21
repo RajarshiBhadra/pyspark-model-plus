@@ -19,8 +19,8 @@ train, test = train_test_split(full_iris, stratify=full_iris["Species"], test_si
 train.append(train[train["Species"] == "setosa"]).append(
     train[train["Species"] == "setosa"]
 )
-# train.to_csv("iris_train.csv", index=False)
-# test.to_csv("iris_test.csv", index=False)
+train.to_csv("iris_train.csv", index=False)
+test.to_csv("iris_test.csv", index=False)
 
 
 df_train = spark.read.csv("iris_train.csv", inferSchema=True, header=True)
