@@ -7,7 +7,7 @@ from pyspark.sql import Window
 from pyspark.sql.functions import monotonically_increasing_id
 from pyspark.ml.tuning import CrossValidator, CrossValidatorModel
 from pyspark import keyword_only
-from pyspark.ml.util import _MLflowInstrumentation
+from pyspark import inheritable_thread_target
 from multiprocessing.pool import ThreadPool
 
 
@@ -158,64 +158,41 @@ class StratifiedCrossValidator(CrossValidator):
 
         return stratified_data
 
-
     def _fit(self, dataset):
-        from pyspark import inheritable_thread_target
-        from pyspark.ml.util import _cancel_on_failure
-
-        spark = dataset.sql_ctx.sparkSession
-        should_log_to_mlflow = _MLflowInstrumentation.get_mlflow_logging_status(spark)
-
         est = self.getOrDefault(self.estimator)
         epm = self.getOrDefault(self.estimatorParamMaps)
         numModels = len(epm)
         eva = self.getOrDefault(self.evaluator)
         nFolds = self.getOrDefault(self.numFolds)
         metrics = [0.0] * numModels
-        metrics_all = [[0.0] * numModels for i in range(nFolds)]
 
         pool = ThreadPool(processes=min(self.getParallelism(), numModels))
         subModels = None
         collectSubModelsParam = self.getCollectSubModels()
+
         if collectSubModelsParam:
             subModels = [[None for j in range(numModels)] for i in range(nFolds)]
 
         stratified_data = self._stratify_data(dataset)
+
         for i in range(nFolds):
 
             train = stratified_data.filter(stratified_data["bucket_fold"] != i)
             validation = stratified_data.filter(stratified_data["bucket_fold"] == i)
 
-            tasks = _parallelFitTasks(
-                est, train, eva, validation, epm, collectSubModelsParam
+            tasks = map(
+                inheritable_thread_target,
+                _parallelFitTasks(
+                    est, train, eva, validation, epm, collectSubModelsParam
+                ),
             )
+            for j, metric, subModel in pool.imap_unordered(lambda f: f(), tasks):
+                metrics[j] += metric / nFolds
+                if collectSubModelsParam:
+                    subModels[i][j] = subModel
 
-            sub_task_failed = [False]
-
-            def calculate_metrics():
-                @inheritable_thread_target
-                def run_task(task):
-                    if sub_task_failed[0]:
-                        raise RuntimeError(
-                            "Terminate this task because one of other task failed."
-                        )
-                    return task()
-
-                for j, metric, subModel in pool.imap_unordered(run_task, tasks):
-                    metrics[j] += metric / nFolds
-                    metrics_all[i][j] = metric
-                    if collectSubModelsParam:
-                        subModels[i][j] = subModel
-
-            _cancel_on_failure(
-                dataset._sc, self.uid, sub_task_failed, calculate_metrics
-            )
             validation.unpersist()
             train.unpersist()
-
-        if should_log_to_mlflow:
-            mlflow_logger = _MLflowInstrumentation()
-            mlflow_logger.log_crossvalidator(self, metrics_all)
 
         if eva.isLargerBetter():
             bestIndex = np.argmax(metrics)
