@@ -1,6 +1,7 @@
 from pyspark.ml import Estimator
 import re
 
+
 class CustomMeanImputer(Estimator):
     """
     This class replaces the missing values of non-categorical variables with 
@@ -12,26 +13,30 @@ class CustomMeanImputer(Estimator):
          class did operations column by column which made the process slow
 
     """
-    def __init__(self,cols_to_impute, value = None):
+
+    def __init__(self, cols_to_impute, value=None):
         super(CustomMeanImputer, self).__init__()
         self.value = value
         self.cols_to_impute = cols_to_impute
 
-    def setParams(self, inputCol, cols_to_impute, value = None):
+    def setParams(self, inputCol, cols_to_impute, value=None):
         kwargs = self.setParams._input_kwargs
         return self._set(**kwargs)
 
     def getImputeValue(self):
         print(self.inputCol, self.value)
 
-    def fit(self, dataset):
+    def _fit(self, dataset):
         num_cols = self.cols_to_impute
         self.value = dict()
-        dict_custom  = {key: "avg" for key in num_cols}
+        dict_custom = {key: "avg" for key in num_cols}
         mean_dict = dataset.agg(dict_custom).first().asDict()
-        self.value = {re.findall(r"avg\((.*)\)", key)[0]:round(float(val), 4) for key, val in mean_dict.items()}
-        return CustomMeanImputer(value = self.value, cols_to_impute = self.cols_to_impute)
+        self.value = {
+            re.findall(r"avg\((.*)\)", key)[0]: round(float(val), 4)
+            for key, val in mean_dict.items()
+        }
+        return CustomMeanImputer(value=self.value, cols_to_impute=self.cols_to_impute)
 
-    def transform(self, dataset):
+    def _transform(self, dataset):
         dataset = dataset.na.fill(self.value)
         return dataset
