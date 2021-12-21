@@ -29,6 +29,7 @@ df_test = spark.read.csv("iris_test.csv", inferSchema=True, header=True)
 
 stages = []
 indexer = StringIndexer(inputCol="Species", outputCol="labelIndex")
+stages += [indexer]
 assembler = VectorAssembler(
     inputCols=["Sepal_Length", "Sepal_Width", "Petal_Length", "Petal_Width"],
     outputCol="features",
@@ -61,7 +62,7 @@ for parallel in range(1, 11):
         stratify_summary=True,
         parallelism=parallel,
     )
-
+print("works")
 out = perfplot.bench(
     setup=lambda n: training_data,
     kernels=[lambda df: cv.fit(df) for cv in cv_dict.values()],
