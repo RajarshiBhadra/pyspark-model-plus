@@ -26,7 +26,7 @@ class CustomMeanImputer(Estimator):
     def getImputeValue(self):
         print(self.inputCol, self.value)
 
-    def _fit(self, dataset):
+    def fit(self, dataset):
         num_cols = self.cols_to_impute
         self.value = dict()
         dict_custom = {key: "avg" for key in num_cols}
@@ -37,6 +37,6 @@ class CustomMeanImputer(Estimator):
         }
         return CustomMeanImputer(value=self.value, cols_to_impute=self.cols_to_impute)
 
-    def _transform(self, dataset):
+    def transform(self, dataset):
         dataset = dataset.na.fill(self.value)
         return dataset
