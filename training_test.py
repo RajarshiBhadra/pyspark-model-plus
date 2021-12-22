@@ -84,13 +84,3 @@ out = perfplot.bench(
 )
 out.show()
 out.save("./perf.png", transparent=True, bbox_inches="tight")
-## stratifiedCV = StratifiedCrossValidator(cv)
-# start_time = time.time()
-# cvModel = cv.fit(training_data)
-# print("parallel = {}, time = {}".format(parallel, time.time() - start_time))
-
-# test_data = pipelineData.transform(df_test)
-# predictions = cvModel.transform(test_data)
-# evaluator = MulticlassLogLossEvaluator(labelCol="labelIndex")
-# accuracy = evaluator.evaluate(predictions)
-# print(accuracy)
