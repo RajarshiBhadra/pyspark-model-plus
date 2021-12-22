@@ -1,17 +1,13 @@
 import pandas as pd
-import time
 from sklearn.model_selection import train_test_split
 from pyspark.sql import SparkSession
-
 from pyspark_model_plus.evaluation import MulticlassLogLossEvaluator
 from pyspark_model_plus.training import StratifiedCrossValidator
-from pyspark_model_plus.training_old import StratifiedCrossValidatorOld
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.tuning import ParamGridBuilder
 from pyspark.ml import Pipeline
 
-import perfplot
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -40,8 +36,6 @@ stages += [assembler]
 pipeline = Pipeline(stages=stages)
 pipelineData = pipeline.fit(df_train)
 training_data = pipelineData.transform(df_train)
-print(training_data.head(1))
-# print(training_data.explain(True))
 
 model = RandomForestClassifier(
     labelCol="labelIndex",
@@ -51,36 +45,16 @@ model = RandomForestClassifier(
 )
 paramGrid = ParamGridBuilder().addGrid(model.numTrees, [250, 252]).build()
 
-cv_dict = {}
+parallel = 1
 
-for parallel in [1, 2, 5]:
-    cv_dict[parallel] = StratifiedCrossValidator(
-        labelCol="labelIndex",
-        estimator=model,
-        estimatorParamMaps=paramGrid,
-        evaluator=MulticlassLogLossEvaluator(labelCol="labelIndex"),
-        numFolds=3,
-        stratify_summary=True,
-        parallelism=parallel,
-    )
-
-cv_dict["originial"] = StratifiedCrossValidatorOld(
+cv = StratifiedCrossValidator(
     labelCol="labelIndex",
     estimator=model,
     estimatorParamMaps=paramGrid,
     evaluator=MulticlassLogLossEvaluator(labelCol="labelIndex"),
     numFolds=3,
     stratify_summary=True,
+    parallelism=parallel,
 )
 
-print("works")
-out = perfplot.bench(
-    setup=lambda n: training_data,
-    kernels=[lambda df: cv.fit(df) for cv in cv_dict.values()],
-    labels=[str(cv) for cv in cv_dict.keys()],
-    n_range=list(range(1, 4)),  # how often for one method
-    xlabel="#loop",
-    equality_check=None,
-)
-out.show()
-out.save("./perf.png", transparent=True, bbox_inches="tight")
+cv_model = cv.fit(training_data)
