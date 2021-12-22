@@ -1,5 +1,5 @@
 import pandas as pd
-import time
+import timeit
 from sklearn.model_selection import train_test_split
 from pyspark.sql import SparkSession
 
@@ -10,8 +10,6 @@ from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.tuning import ParamGridBuilder
 from pyspark.ml import Pipeline
-
-import perfplot
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -62,3 +60,6 @@ cv = StratifiedCrossValidatorOld(
 )
 
 cv_model = cv.fit(training_data)
+
+t = timeit.repeat(lambda: cv.fit(training_data), number=2, repeat=3)
+print(t)

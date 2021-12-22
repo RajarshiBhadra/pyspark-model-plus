@@ -8,6 +8,7 @@ from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.tuning import ParamGridBuilder
 from pyspark.ml import Pipeline
 
+import timeit
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -56,5 +57,6 @@ cv = StratifiedCrossValidator(
     stratify_summary=True,
     parallelism=parallel,
 )
-
-cv_model = cv.fit(training_data)
+print("now the measurement starts")
+t = timeit.repeat(lambda: cv.fit(training_data), number=2, repeat=3)
+print(t)
