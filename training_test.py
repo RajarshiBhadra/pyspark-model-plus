@@ -5,6 +5,7 @@ from pyspark.sql import SparkSession
 
 from pyspark_model_plus.evaluation import MulticlassLogLossEvaluator
 from pyspark_model_plus.training import StratifiedCrossValidator
+from pyspark_model_plus.training_old import StratifiedCrossValidatorOld
 from pyspark.ml.feature import StringIndexer, VectorAssembler
 from pyspark.ml.classification import RandomForestClassifier
 from pyspark.ml.tuning import ParamGridBuilder
@@ -52,7 +53,7 @@ paramGrid = ParamGridBuilder().addGrid(model.numTrees, [250, 252]).build()
 
 cv_dict = {}
 
-for parallel in range(1, 11):
+for parallel in [1, 2, 5]:
     cv_dict[parallel] = StratifiedCrossValidator(
         labelCol="labelIndex",
         estimator=model,
@@ -62,16 +63,27 @@ for parallel in range(1, 11):
         stratify_summary=True,
         parallelism=parallel,
     )
+
+cv_dict["originial"] = StratifiedCrossValidatorOld(
+    labelCol="labelIndex",
+    estimator=model,
+    estimatorParamMaps=paramGrid,
+    evaluator=MulticlassLogLossEvaluator(labelCol="labelIndex"),
+    numFolds=3,
+    stratify_summary=True,
+)
+
 print("works")
 out = perfplot.bench(
     setup=lambda n: training_data,
     kernels=[lambda df: cv.fit(df) for cv in cv_dict.values()],
     labels=[str(cv) for cv in cv_dict.keys()],
-    n_range=list(range(2)),  # how often for one method
+    n_range=list(range(1, 4)),  # how often for one method
     xlabel="#loop",
+    equality_check=None,
 )
 out.show()
-out.save("perf.png", transparent=True, bbox_inches="tight")
+out.save("./perf.png", transparent=True, bbox_inches="tight")
 ## stratifiedCV = StratifiedCrossValidator(cv)
 # start_time = time.time()
 # cvModel = cv.fit(training_data)
