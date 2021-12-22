@@ -9,6 +9,7 @@ from pyspark.ml.tuning import ParamGridBuilder
 from pyspark.ml import Pipeline
 
 import timeit
+import time
 
 spark = SparkSession.builder.getOrCreate()
 
@@ -46,7 +47,7 @@ model = RandomForestClassifier(
 )
 paramGrid = ParamGridBuilder().addGrid(model.numTrees, [250, 252]).build()
 
-parallel = 1
+parallel = 10
 
 cv = StratifiedCrossValidator(
     labelCol="labelIndex",
@@ -57,6 +58,9 @@ cv = StratifiedCrossValidator(
     stratify_summary=True,
     parallelism=parallel,
 )
+time_start = time.time()
+fitted = cv.fit(training_data)
+print("time needed: {}".format(time.time() - time_start))
 print("now the measurement starts")
 t = timeit.repeat(lambda: cv.fit(training_data), number=2, repeat=3)
 print(t)

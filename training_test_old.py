@@ -1,5 +1,5 @@
 import pandas as pd
-import timeit
+import timeit, time
 from sklearn.model_selection import train_test_split
 from pyspark.sql import SparkSession
 
@@ -61,5 +61,9 @@ cv = StratifiedCrossValidatorOld(
 
 cv_model = cv.fit(training_data)
 
+time_start = time.time()
+fitted = cv.fit(training_data)
+print("time needed: {}".format(time.time() - time_start))
+print("evaluation starts")
 t = timeit.repeat(lambda: cv.fit(training_data), number=2, repeat=3)
 print(t)
