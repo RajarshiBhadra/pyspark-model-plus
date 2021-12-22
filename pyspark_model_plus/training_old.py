@@ -68,8 +68,6 @@ class StratifiedCrossValidatorOld(CrossValidator):
 
         for i in range(nFolds):
 
-            print(f"Initiating Training for fold {i + 1}")
-
             train = stratified_data.filter(stratified_data["bucket_fold"] != i)
             validation = stratified_data.filter(stratified_data["bucket_fold"] == i)
 
